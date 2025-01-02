@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
-import { Amplify } from 'aws-amplify';
 import outputs from '@/amplify_outputs.json';
+
 // import '@aws-amplify/ui-react/styles.css';
 import { Button } from '@aws-amplify/ui-react';
-
 Amplify.configure(outputs);
-
 const client = generateClient<Schema>();
 
 export default function App() {
@@ -31,6 +30,10 @@ export default function App() {
     });
   }
 
+  function deleteTodo(id: string) {
+    client.models.Todo.delete({ id });
+  }
+
   return (
     <main>
       <Button size='small' variation='primary'>
@@ -40,7 +43,13 @@ export default function App() {
       <button onClick={createTodo}>+ new</button>
       <ul>
         {todos.map((todo) => (
-          <li key={todo.id}>{todo.content}</li>
+          <li
+            className='hover:cursor-pointer'
+            onClick={() => deleteTodo(todo.id)}
+            key={todo.id}
+          >
+            {todo.content}
+          </li>
         ))}
       </ul>
       <div>

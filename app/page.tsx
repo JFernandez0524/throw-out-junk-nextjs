@@ -6,59 +6,54 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import outputs from '@/amplify_outputs.json';
 
-// import '@aws-amplify/ui-react/styles.css';
-import { Button } from '@aws-amplify/ui-react';
+// Import components
+import Hero from '@/app/components/Hero';
+import Services from '@/app/components/Services';
+import WhyChooseUs from '@/app/components/WhyChooseUs';
+import Testimonials from '@/app/components/Testimonials';
+import CTA from '@/app/components/CTA';
+import FAQ from '@/app/components/FAQ';
+
+// Configure Amplify and generate the client
 Amplify.configure(outputs);
 const client = generateClient<Schema>();
 
+// App component
 export default function App() {
   const [todos, setTodos] = useState<Array<Schema['Todo']['type']>>([]);
 
+  // List all todos
   function listTodos() {
     client.models.Todo.observeQuery().subscribe({
       next: (data) => setTodos([...data.items]),
     });
   }
 
+  // Fetch todos on mount
   useEffect(() => {
     listTodos();
   }, []);
 
+  // Create a new todo
   function createTodo() {
     client.models.Todo.create({
       content: window.prompt('Todo content'),
     });
   }
 
+  // Delete a todo
   function deleteTodo(id: string) {
     client.models.Todo.delete({ id });
   }
 
   return (
     <main>
-      <Button size='small' variation='primary'>
-        Hello world
-      </Button>
-      <h1 className='text-lime-900'>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li
-            className='hover:cursor-pointer'
-            onClick={() => deleteTodo(todo.id)}
-            key={todo.id}
-          >
-            {todo.content}
-          </li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href='https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components/'>
-          Review next steps of this tutorial.
-        </a>
-      </div>
+      <Hero />
+      <Services />
+      <WhyChooseUs />
+      <Testimonials />
+      <FAQ />
+      <CTA />
     </main>
   );
 }

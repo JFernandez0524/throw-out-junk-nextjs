@@ -1,17 +1,16 @@
 'use client';
-import { Authenticator } from '@aws-amplify/ui-react';
 
+import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 
-export default function App() {
+export default function AuthPage() {
   return (
-    <Authenticator>
-      {({ signOut, user }) => (
-        <main>
-          <h1>Hello {user?.username}</h1>
-          <button onClick={signOut}>Sign out</button>
-        </main>
-      )}
-    </Authenticator>
+    <div className='min-h-screen flex justify-center items-center bg-gray-50 dark:bg-gray-900'>
+      <Authenticator
+        socialProviders={['google']}
+        loginMechanisms={['email']}
+        variation='modal'
+      />
+    </div>
   );
 }

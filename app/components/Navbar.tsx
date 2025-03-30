@@ -1,13 +1,36 @@
-'use client'; // Required for Next.js App Router
+'use client';
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { FiMenu, FiX, FiPhone } from 'react-icons/fi'; // Using react-icons
+import { FiMenu, FiX, FiPhone, FiLogIn, FiLogOut } from 'react-icons/fi';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 const Navbar: React.FC = () => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-  const phoneNumber = '+1-973-384-1054'; // Update with your real number
+  const [isOpen, setIsOpen] = useState(false);
+  const phoneNumber = '+1-973-384-1054';
+
+  const { user, signOut } = useAuthenticator((context) => [context.user]);
+
+  const AuthLink = () =>
+    user ? (
+      <button
+        onClick={signOut}
+        className='text-gray-700 hover:text-primary transition duration-300 flex items-center gap-1'
+      >
+        <FiLogOut />
+        Logout
+      </button>
+    ) : (
+      <Link
+        href='/auth/signin'
+        className='text-gray-700 hover:text-primary transition duration-300 flex items-center gap-1'
+        onClick={() => setIsOpen(false)}
+      >
+        <FiLogIn />
+        Login
+      </Link>
+    );
 
   return (
     <nav className='bg-white shadow-md fixed top-0 left-0 w-full z-50'>
@@ -22,7 +45,6 @@ const Navbar: React.FC = () => {
               Throw Out <span className='text-secondary'>MyJunk</span>
             </Link>
 
-            {/* Visible Phone Number on Mobile */}
             <a
               href={`tel:${phoneNumber}`}
               className='md:hidden flex items-center text-primary font-semibold'
@@ -31,7 +53,7 @@ const Navbar: React.FC = () => {
             </a>
           </div>
 
-          {/* Desktop Phone Number */}
+          {/* Desktop Phone */}
           <a
             href={`tel:${phoneNumber}`}
             className='hidden md:flex items-center text-primary font-semibold text-lg hover:text-primary-dark transition'
@@ -49,16 +71,17 @@ const Navbar: React.FC = () => {
           </button>
 
           {/* Desktop Menu */}
-          <div className='hidden md:flex space-x-6'>
+          <div className='hidden md:flex space-x-6 items-center'>
             <NavItem href='/' label='Home' />
             <NavItem href='/services' label='Services' />
             <NavItem href='/about' label='About' />
             <NavItem href='/contact' label='Contact' />
+            <AuthLink />
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown (Animated) */}
+      {/* Mobile Dropdown */}
       {isOpen && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -83,6 +106,7 @@ const Navbar: React.FC = () => {
               label='Contact'
               onClick={() => setIsOpen(false)}
             />
+            <AuthLink />
           </div>
         </motion.div>
       )}
@@ -90,7 +114,6 @@ const Navbar: React.FC = () => {
   );
 };
 
-// Reusable NavItem Component
 interface NavItemProps {
   href: string;
   label: string;

@@ -5,7 +5,7 @@ import {
   HarmBlockThreshold,
 } from '@google-cloud/vertexai';
 
-const project = process.env.GOOGLE_PROJECT_ID; // Replace with your Google Cloud Project ID
+const project = process.env.GOOGLE_PROJECT_ID || 'vertex-ai-labs-454711'; // Replace with your Google Cloud Project ID
 const location = 'us-central1'; // Your Vertex AI region
 const textModel = 'gemini-1.5-flash'; // Change model if needed
 

@@ -11,10 +11,12 @@ export const auth = defineAuth({
       callbackUrls: [
         'http://localhost:3000/profile',
         'https://throwoutmyjunk.com/profile',
+        'https://main.d21z4t8hwrx134.amplifyapp.com/profile',
       ],
       logoutUrls: [
         'http://localhost:3000/auth/logout',
         'https://throwoutmyjunk.com/auth/logout',
+        'https://main.d21z4t8hwrx134.amplifyapp.com/auth/logout',
       ],
     },
   },

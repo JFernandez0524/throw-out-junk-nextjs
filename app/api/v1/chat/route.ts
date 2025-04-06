@@ -4,55 +4,70 @@ import {
   HarmCategory,
   HarmBlockThreshold,
 } from '@google-cloud/vertexai';
+import { v4 as uuidv4 } from 'uuid'; // Install this via npm if needed
 
-const project = process.env.GOOGLE_PROJECT_ID || 'vertex-ai-labs-454711'; // Replace with your Google Cloud Project ID
-const location = 'us-central1'; // Your Vertex AI region
-const textModel = 'gemini-1.5-flash'; // Change model if needed
+const project = process.env.GOOGLE_PROJECT_ID || 'vertex-ai-labs-454711';
+const location = 'us-central1';
+const modelName = 'gemini-1.5-flash';
 
 const vertexAI = new VertexAI({ project, location });
 const generativeModel = vertexAI.getGenerativeModel({
-  model: textModel,
+  model: modelName,
   safetySettings: [
     {
       category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
     },
   ],
-  generationConfig: { maxOutputTokens: 256 }, // Adjust token limit
+  generationConfig: { maxOutputTokens: 256 },
 });
 
-// Store chat sessions in memory (temporary, not persistent)
+// Simple in-memory chat store (reset on server restart)
 interface ChatSessions {
-  [sessionId: string]: any;
+  [sessionId: string]: ReturnType<typeof generativeModel.startChat>;
 }
 const chatSessions: ChatSessions = {};
 
-// Define the API route for handling multi-turn chat
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { sessionId, message } = body;
+    const { message, sessionId: incomingId } = body;
 
-    if (!sessionId || !message) {
+    if (!message) {
       return NextResponse.json(
-        { error: 'sessionId and message are required' },
+        { error: 'Message is required' },
         { status: 400 }
       );
     }
 
-    // Create a new session if it doesn't exist
+    // Assign or reuse sessionId
+    const sessionId = incomingId || uuidv4();
+
+    // Create new chat session if it doesn't exist
     if (!chatSessions[sessionId]) {
-      chatSessions[sessionId] = generativeModel.startChat();
+      chatSessions[sessionId] = generativeModel.startChat({
+        history: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `You're a friendly assistant for a junk removal company in New Jersey called ThrowOutMyJunk. 
+                Your job is to help potential customers understand the services offered (junk removal, cleanouts, light demolition), pricing ranges, and how to book a quote. 
+                Keep answers clear, concise, and helpful.`,
+              },
+            ],
+          },
+        ],
+      });
     }
 
-    // Send a message to the chat session
     const chat = chatSessions[sessionId];
     const result = await chat.sendMessageStream(message);
 
     let responseText = '';
     for await (const item of result.stream) {
-      if (item?.candidates) {
-        responseText += item.candidates[0].content.parts[0].text || '';
+      if (item?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        responseText += item.candidates[0].content.parts[0].text;
       }
     }
 

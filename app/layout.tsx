@@ -5,6 +5,7 @@ import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
 import { DarkMode } from './components/darkMode';
 import { ClientProvider } from './components/ClientProvider'; // ✅ NEW
+import ChatBox from './components/ChatBox';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({
           <Navbar />
           <main className='flex-grow'>
             <DarkMode>{children}</DarkMode>
+            <ChatBox />
           </main>
           <Footer />
         </ClientProvider>

@@ -18,7 +18,7 @@ const generativeModel = vertexAI.getGenerativeModel({
       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
     },
   ],
-  generationConfig: { maxOutputTokens: 512 }, // Adjust token limit
+  generationConfig: { maxOutputTokens: 256 }, // Adjust token limit
 });
 
 // Store chat sessions in memory (temporary, not persistent)

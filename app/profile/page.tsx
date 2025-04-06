@@ -5,6 +5,8 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 export default function Profile() {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
 
+  const attributes = (user as any).attributes || {};
+
   return (
     <div className='p-6'>
       <h1 className='text-2xl font-bold mb-4'>Profile Page</h1>
@@ -15,10 +17,10 @@ export default function Profile() {
             <strong>Username:</strong> {user.username}
           </p>
           <p>
-            <strong>Email:</strong> {user.attributes?.email}
+            <strong>Email:</strong> {attributes.email || 'Not provided'}
           </p>
           <p>
-            <strong>Name:</strong> {user.attributes?.name || 'Not provided'}
+            <strong>Name:</strong> {attributes.name || 'Not provided'}
           </p>
           <button
             onClick={signOut}

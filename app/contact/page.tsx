@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { FiPhone, FiMail, FiSend } from 'react-icons/fi';
+import PhoneNumber from '@/app/components/PhoneNumber';
 
 const phoneNumber = '+1-973-384-1054';
 const email = 'info@throwoutmyjunk.com';
@@ -58,8 +59,7 @@ export default function ContactPage() {
           href={`tel:${phoneNumber}`}
           className='block bg-primary text-white px-6 py-3 text-lg font-semibold rounded-lg shadow-md hover:bg-primary-dark transition inline-flex items-center mx-auto'
         >
-          <FiPhone className='mr-2' size={24} />
-          Call {phoneNumber}
+          <PhoneNumber className='text-white' />
         </a>
         <a
           href={`mailto:${email}`}

@@ -25,7 +25,7 @@ const Navbar: React.FC = () => {
             {/* Visible Phone Number on Mobile */}
             <a
               href={`tel:${phoneNumber}`}
-              className='md:hidden flex items-center text-primary font-semibold'
+              className='md:hidden flex items-center text-primary font-semibold text-2xl hover:text-primary-dark transition'
             >
               <FiPhone className='mr-1' /> Call Now
             </a>

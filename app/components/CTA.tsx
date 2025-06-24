@@ -1,4 +1,5 @@
 import { FiPhone } from 'react-icons/fi';
+import PhoneNumber from './PhoneNumber';
 
 const CTA = () => {
   const phoneNumber = '+1-973-384-1054';
@@ -11,8 +12,7 @@ const CTA = () => {
           href={`tel:${phoneNumber}`}
           className='inline-flex items-center bg-white text-primary px-6 py-3 text-lg font-semibold rounded-lg shadow-md hover:bg-gray-200 transition'
         >
-          <FiPhone className='mr-2' size={24} />
-          Call {phoneNumber}
+          <PhoneNumber />
         </a>
       </div>
     </section>

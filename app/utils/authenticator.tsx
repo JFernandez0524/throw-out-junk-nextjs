@@ -1,8 +1,8 @@
-'use client';
+// 'use client';
 
-import { Authenticator } from '@aws-amplify/ui-react';
-import '@aws-amplify/ui-react/styles.css';
+// import { Authenticator } from '@aws-amplify/ui-react';
+// import '@aws-amplify/ui-react/styles.css';
 
-export function AuthenticatorAws({ children }: { children: React.ReactNode }) {
-  return <Authenticator>{children}</Authenticator>;
-}
+// export function AuthenticatorAws({ children }: { children: React.ReactNode }) {
+//   return <Authenticator>{children}</Authenticator>;
+// }

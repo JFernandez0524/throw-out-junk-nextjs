@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FiPhone, FiMail, FiSend } from 'react-icons/fi';
-import PhoneNumber from '@/app/components/PhoneNumber';
+import PhoneNumber from '@/components/PhoneNumber';
 
 const phoneNumber = '+1-973-384-1054';
 const email = 'info@throwoutmyjunk.com';

@@ -6,12 +6,12 @@ import type { Schema } from '@/amplify/data/resource';
 import outputs from '@/amplify_outputs.json';
 
 // Import components
-import Hero from '@/app/components/Hero';
-import Services from '@/app/components/Services';
-import WhyChooseUs from '@/app/components/WhyChooseUs';
-import Testimonials from '@/app/components/Testimonials';
-import CTA from '@/app/components/CTA';
-import FAQ from '@/app/components/FAQ';
+import Hero from '@/components/Hero';
+import Services from '@/components/Services';
+import WhyChooseUs from '@/components/WhyChooseUs';
+import Testimonials from '@/components/Testimonials';
+import CTA from '@/components/CTA';
+import FAQ from '@/components/FAQ';
 
 // Configure Amplify and generate the client
 Amplify.configure(outputs);

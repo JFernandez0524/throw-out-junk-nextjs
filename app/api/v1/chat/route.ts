@@ -6,10 +6,19 @@ import {
 } from '@google-cloud/vertexai';
 import axios from 'axios';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // Ensure this route is always fresh
 // Google Cloud Setup
-const project = process.env.GOOGLE_CLOUD_PROJECT;
+const project = process.env.GOOGLE_CLOUD_PROJECT!;
 const location = 'us-central1';
 const textModel = 'gemini-2.5-pro';
+
+if (!textModel) {
+  throw new Error('Missing GEMINI_TEXT_MODEL in environment variables');
+}
+if (!project) {
+  throw new Error('Missing GOOGLE_CLOUD_PROJECT in environment variables');
+}
 
 const vertexAI = new VertexAI({ project, location });
 const generativeModel = vertexAI.getGenerativeModel({
@@ -173,10 +182,11 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ response: responseText, sessionId });
-  } catch (error) {
-    console.error('Vertex AI chat error:', error);
+  } catch (error: any) {
+    console.error('🔴 Vertex AI chat error:', error?.message);
+    console.error(error); // full stack trace
     return NextResponse.json(
-      { error: 'Internal Server Error' },
+      { error: 'Internal Server Error', message: error?.message },
       { status: 500 }
     );
   }

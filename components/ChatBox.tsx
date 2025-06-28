@@ -72,14 +72,18 @@ export default function ChatBox() {
         </div>
       )}
 
-      {/* Floating button */}
       {!showChat && (
-        <button
-          onClick={() => setShowChat(true)}
-          className='fixed bottom-6 right-6 w-14 h-14 rounded-full bg-green-600 text-white shadow-lg hover:bg-green-700 flex items-center justify-center text-xl z-50'
-        >
-          💬
-        </button>
+        <div className='fixed bottom-6 right-6 flex flex-col items-center space-y-1 z-50'>
+          <span className='text-sm text-gray-700 bg-white px-2 py-1 rounded shadow'>
+            Chat with us
+          </span>
+          <button
+            onClick={() => setShowChat(true)}
+            className='w-14 h-14 rounded-full bg-green-600 text-white shadow-lg hover:bg-green-700 flex items-center justify-center text-xl'
+          >
+            💬
+          </button>
+        </div>
       )}
 
       {/* Chat Dialog */}

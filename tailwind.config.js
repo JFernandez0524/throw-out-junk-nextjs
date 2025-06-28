@@ -1,8 +1,8 @@
-const { GiWhiteBook } = require('react-icons/gi');
-
-/** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./app/**/*.{js,ts,jsx,tsx,mdx}'],
+  content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}', // keep this
+    './components/**/*.{js,ts,jsx,tsx,mdx}', // ✅ add this
+  ],
   theme: {
     extend: {
       colors: {

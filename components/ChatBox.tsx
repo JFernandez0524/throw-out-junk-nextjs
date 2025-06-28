@@ -13,7 +13,8 @@ export default function ChatBox() {
   const [sessionId, setSessionId] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // inside ChatBox component
+  // Access chat context to control visibility
+
   const { showChat, setShowChat } = useChatContext();
 
   useEffect(() => {

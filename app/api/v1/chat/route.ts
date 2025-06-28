@@ -172,6 +172,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Log environment variables for debugging
+    console.log('ENV project:', process.env.GOOGLE_CLOUD_PROJECT);
+
     // Default: use Gemini chat
     const result = await session.chat.sendMessageStream(message);
     let responseText = '';

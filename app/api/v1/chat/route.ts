@@ -7,9 +7,9 @@ import {
 import axios from 'axios';
 
 // Google Cloud Setup
-const project = process.env.GOOGLE_CLOUD_PROJECT || 'throw-out-my-junk';
+const project = process.env.GOOGLE_CLOUD_PROJECT;
 const location = 'us-central1';
-const textModel = 'gemini-1.5-flash';
+const textModel = 'gemini-2.5-pro';
 
 const vertexAI = new VertexAI({ project, location });
 const generativeModel = vertexAI.getGenerativeModel({

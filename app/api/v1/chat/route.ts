@@ -5,44 +5,43 @@ import {
   HarmCategory,
 } from '@google-cloud/vertexai';
 import axios from 'axios';
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic'; // Ensure this route is always fresh
+export const dynamic = 'force-dynamic';
+
+// ✅ Helper for env variable fallback (local vs AWS Secrets Manager)
+let cachedSecrets: Record<string, string> | null = null;
+
+async function getEnv(key: string): Promise<string> {
+  if (process.env[key]) return process.env[key]!;
+  if (!cachedSecrets) {
+    const client = new SecretsManagerClient({ region: 'us-east-1' });
+    const command = new GetSecretValueCommand({
+      SecretId: 'throw-out-junk-env',
+    });
+    const response = await client.send(command);
+    cachedSecrets = JSON.parse(response.SecretString || '{}');
+  }
+
+  const value = process.env[key] ?? cachedSecrets?.[key];
+
+  if (!value) {
+    throw new Error(`Missing required env variable: ${key}`);
+  }
+  return value;
+}
+
 // Google Cloud Setup
-const project = process.env.GOOGLE_CLOUD_PROJECT!;
 const location = 'us-central1';
 const textModel = 'gemini-2.5-pro';
 
-if (!textModel) {
-  throw new Error('Missing GEMINI_TEXT_MODEL in environment variables');
-}
-if (!project) {
-  throw new Error('Missing GOOGLE_CLOUD_PROJECT in environment variables');
-}
-
-const vertexAI = new VertexAI({ project, location });
-const generativeModel = vertexAI.getGenerativeModel({
-  model: textModel,
-  safetySettings: [
-    {
-      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-  ],
-  generationConfig: { maxOutputTokens: 256 },
-  systemInstruction: {
-    role: 'system',
-    parts: [
-      {
-        text: 'You are a friendly junk removal customer support agent for Throw Out My Junk. Be conversational, helpful, and walk users through each step.',
-      },
-    ],
-  },
-});
-
 // Address Validation Helper
 async function validateAddress({ street, city, state, zip }: any) {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  const apiKey = await getEnv('GOOGLE_MAPS_API_KEY');
   const url = `https://addressvalidation.googleapis.com/v1:validateAddress?key=${apiKey}`;
   const addressText = `${street}, ${city}, ${state} ${zip}`;
 
@@ -98,6 +97,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const project = await getEnv('GOOGLE_CLOUD_PROJECT');
+
+    const vertexAI = new VertexAI({ project, location });
+    const generativeModel = vertexAI.getGenerativeModel({
+      model: textModel,
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+      ],
+      generationConfig: { maxOutputTokens: 256 },
+      systemInstruction: {
+        role: 'system',
+        parts: [
+          {
+            text: 'You are a friendly junk removal customer support agent for Throw Out My Junk. Be conversational, helpful, and walk users through each step.',
+          },
+        ],
+      },
+    });
+
     // Initialize new session
     if (!chatSessions[sessionId]) {
       chatSessions[sessionId] = {
@@ -142,7 +163,6 @@ export async function POST(req: NextRequest) {
             sessionId,
           });
         } else {
-          // Reset and try again
           session.state = 'awaiting_street';
           session.address = {};
           return NextResponse.json({
@@ -152,7 +172,6 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // Intent detection — trigger address collection only when it makes sense
     const lower = message.toLowerCase();
     const interestKeywords = [
       'pickup',
@@ -172,10 +191,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Log environment variables for debugging
-    console.log('ENV project:', process.env.GOOGLE_CLOUD_PROJECT);
-
-    // Default: use Gemini chat
     const result = await session.chat.sendMessageStream(message);
     let responseText = '';
     for await (const item of result.stream) {
@@ -187,7 +202,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ response: responseText, sessionId });
   } catch (error: any) {
     console.error('🔴 Vertex AI chat error:', error?.message);
-    console.error(error); // full stack trace
     return NextResponse.json(
       { error: 'Internal Server Error', message: error?.message },
       { status: 500 }

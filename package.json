@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.9.5",
+    "@aws-sdk/client-secrets-manager": "^3.840.0",
     "@google-cloud/vertexai": "^1.10.0",
     "aws-amplify": "^6.6.6",
     "axios": "^1.10.0",

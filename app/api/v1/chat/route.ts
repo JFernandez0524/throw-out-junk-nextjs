@@ -9,29 +9,36 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager';
+import { th } from 'framer-motion/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // ✅ Helper for env variable fallback (local vs AWS Secrets Manager)
+
 let cachedSecrets: Record<string, string> | null = null;
 
-async function getEnv(key: string): Promise<string> {
+export async function getEnv(key: string): Promise<string> {
+  // Local development env fallback
   if (process.env[key]) return process.env[key]!;
+
+  // Fetch secrets from AWS
   if (!cachedSecrets) {
     const client = new SecretsManagerClient({ region: 'us-east-1' });
     const command = new GetSecretValueCommand({
       SecretId: 'throw-out-junk-env',
     });
-    const response = await client.send(command);
-    cachedSecrets = JSON.parse(response.SecretString || '{}');
+
+    try {
+      const response = await client.send(command);
+      cachedSecrets = JSON.parse(response.SecretString || '{}');
+    } catch (error) {
+      throw new Error(`Failed to fetch secrets: ${error}`);
+    }
   }
 
-  const value = process.env[key] ?? cachedSecrets?.[key];
-
-  if (!value) {
-    throw new Error(`Missing required env variable: ${key}`);
-  }
+  const value = cachedSecrets?.[key];
+  if (!value) throw new Error(`Missing secret key: ${key}`);
   return value;
 }
 
@@ -86,6 +93,12 @@ const chatSessions: {
 
 // POST Handler
 export async function POST(req: NextRequest) {
+  console.log('[Chat API] Starting new request...');
+  console.log(
+    '[Chat API] Loaded GOOGLE_CLOUD_PROJECT =',
+    await getEnv('GOOGLE_CLOUD_PROJECT')
+  );
+
   try {
     const body = await req.json();
     const { sessionId, message } = body;

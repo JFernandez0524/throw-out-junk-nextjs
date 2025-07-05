@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 
 let cachedSecrets: Record<string, string> | null = null;
 
-export async function getEnv(key: string): Promise<string> {
+async function getEnv(key: string): Promise<string> {
   // Local development env fallback
   if (process.env[key]) return process.env[key]!;
 

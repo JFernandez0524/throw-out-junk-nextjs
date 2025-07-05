@@ -9,7 +9,6 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager';
-import { th } from 'framer-motion/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

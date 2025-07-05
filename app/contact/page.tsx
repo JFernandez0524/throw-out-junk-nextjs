@@ -29,7 +29,7 @@ export default function ContactPage() {
     setStatus('loading');
 
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('/api/v1/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -57,7 +57,7 @@ export default function ContactPage() {
       <div className='mt-8 space-y-6'>
         <a
           href={`tel:${phoneNumber}`}
-          className='block bg-primary text-white px-6 py-3 text-lg font-semibold rounded-lg shadow-md hover:bg-primary-dark transition inline-flex items-center mx-auto'
+          className='inline-flex bg-primary text-white px-6 py-3 text-lg font-semibold rounded-lg shadow-md hover:bg-primary-dark transition items-center mx-auto'
         >
           <PhoneNumber className='text-white' />
         </a>

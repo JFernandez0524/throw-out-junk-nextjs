@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { sessionId, message } = body;
+    const project = await getEnv('GOOGLE_CLOUD_PROJECT');
 
     if (!sessionId || !message) {
       return NextResponse.json(
@@ -108,8 +109,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    const project = await getEnv('GOOGLE_CLOUD_PROJECT');
 
     const vertexAI = new VertexAI({ project, location });
     const generativeModel = vertexAI.getGenerativeModel({

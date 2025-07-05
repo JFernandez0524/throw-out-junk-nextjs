@@ -93,12 +93,16 @@ const chatSessions: {
 // POST Handler
 export async function POST(req: NextRequest) {
   console.log('[Chat API] Starting new request...');
-  console.log(
-    '[Chat API] Loaded GOOGLE_CLOUD_PROJECT =',
-    await getEnv('GOOGLE_CLOUD_PROJECT')
-  );
 
   try {
+    console.log(
+      '[Chat API] Loaded GOOGLE_CLOUD_PROJECT =',
+      await getEnv('GOOGLE_CLOUD_PROJECT')
+    );
+    console.log(
+      '[Chat API] Loaded GOOGLE_MAPS_API_KEY =',
+      await getEnv('GOOGLE_MAPS_API_KEY')
+    );
     const body = await req.json();
     const { sessionId, message } = body;
     const project = await getEnv('GOOGLE_CLOUD_PROJECT');

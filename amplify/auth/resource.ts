@@ -5,8 +5,9 @@ export const auth = defineAuth({
     email: true,
     externalProviders: {
       google: {
-        clientId: secret('GOOGLE_CLIENT_ID'), // ✅ from Amplify secrets
-        clientSecret: secret('GOOGLE_CLIENT_SECRET'),
+        clientId: secret('GOOGLE_CLIENT_ID') || process.env.GOOGLE_CLIENT_ID, // ✅ from Amplify secrets
+        clientSecret:
+          secret('GOOGLE_CLIENT_SECRET') || process.env.GOOGLE_CLIENT_SECRET,
         scopes: ['openid', 'profile', 'email'],
       },
       callbackUrls: [

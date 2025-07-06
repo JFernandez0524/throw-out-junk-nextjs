@@ -5,16 +5,15 @@ export const auth = defineAuth({
     email: true,
     externalProviders: {
       google: {
-        clientId: secret('GOOGLE_CLIENT_ID') || process.env.GOOGLE_CLIENT_ID, // ✅ from Amplify secrets
-        clientSecret:
-          secret('GOOGLE_CLIENT_SECRET') || process.env.GOOGLE_CLIENT_SECRET,
-        scopes: ['openid', 'profile', 'email'],
+        clientId: secret('GOOGLE_CLIENT_ID'),
+        clientSecret: secret('GOOGLE_CLIENT_SECRET'),
       },
+
       callbackUrls: [
-        'http://localhost:3000/profile',
-        'https://throwoutmyjunk.com/profile',
-        'https://www.throwoutmyjunk.com/profile',
-        'https://main.d21z4t8hwrx134.amplifyapp.com/profile',
+        'http://localhost:3000/api/auth/callback/google',
+        'https://throwoutmyjunk.com/api/auth/callback/google',
+        'https://www.throwoutmyjunk.com/api/auth/callback/google',
+        'https://main.d21z4t8hwrx134.amplifyapp.com/api/auth/callback/google',
       ],
       logoutUrls: [
         'http://localhost:3000/auth/logout',

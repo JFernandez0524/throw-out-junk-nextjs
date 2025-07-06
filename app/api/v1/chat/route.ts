@@ -9,6 +9,7 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager';
+import { secret } from '@aws-amplify/backend';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,7 +48,13 @@ const textModel = 'gemini-2.5-pro';
 
 // Address Validation Helper
 async function validateAddress({ street, city, state, zip }: any) {
-  const apiKey = await getEnv('GOOGLE_MAPS_API_KEY');
+  // const apiKey = await getEnv('GOOGLE_MAPS_API_KEY');
+  const apiKey =
+    secret('GOOGLE_MAPS_API_KEY') || process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    console.error('Missing GOOGLE_MAPS_API_KEY');
+    return { success: false, formattedAddress: '' };
+  }
   const url = `https://addressvalidation.googleapis.com/v1:validateAddress?key=${apiKey}`;
   const addressText = `${street}, ${city}, ${state} ${zip}`;
 
@@ -105,7 +112,31 @@ export async function POST(req: NextRequest) {
     );
     const body = await req.json();
     const { sessionId, message } = body;
-    const project = await getEnv('GOOGLE_CLOUD_PROJECT');
+    // const project = await getEnv('GOOGLE_CLOUD_PROJECT');
+    let project = process.env.GOOGLE_CLOUD_PROJECT;
+    if (!project) {
+      const secretValue = secret('GOOGLE_CLOUD_PROJECT');
+      if (typeof secretValue === 'string') {
+        project = secretValue;
+      } else if (
+        secretValue &&
+        typeof secretValue === 'object' &&
+        'value' in secretValue
+      ) {
+        project = secretValue.value as string;
+      }
+    }
+
+    if (!project) {
+      console.error('Missing GOOGLE_CLOUD_PROJECT');
+      return NextResponse.json(
+        {
+          error: 'Internal Server Error',
+          message: 'Missing GOOGLE_CLOUD_PROJECT',
+        },
+        { status: 500 }
+      );
+    }
 
     if (!sessionId || !message) {
       return NextResponse.json(

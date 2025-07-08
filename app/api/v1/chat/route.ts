@@ -5,52 +5,14 @@ import {
   HarmCategory,
 } from '@google-cloud/vertexai';
 import axios from 'axios';
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager';
-import { secret } from '@aws-amplify/backend';
-
+import { getEnv } from '@/lib/getEnv';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// ✅ Helper for env variable fallback (local vs AWS Secrets Manager)
-
-let cachedSecrets: Record<string, string> | null = null;
-
-async function getEnv(key: string): Promise<string> {
-  // Local development env fallback
-  if (process.env[key]) return process.env[key]!;
-
-  // Fetch secrets from AWS
-  if (!cachedSecrets) {
-    const client = new SecretsManagerClient({ region: 'us-east-1' });
-    const command = new GetSecretValueCommand({
-      SecretId: 'throw-out-junk-env',
-    });
-
-    try {
-      const response = await client.send(command);
-      cachedSecrets = JSON.parse(response.SecretString || '{}');
-    } catch (error) {
-      throw new Error(`Failed to fetch secrets: ${error}`);
-    }
-  }
-
-  const value = cachedSecrets?.[key];
-  if (!value) throw new Error(`Missing secret key: ${key}`);
-  return value;
-}
-
-// Google Cloud Setup
-const location = 'us-central1';
-const textModel = 'gemini-2.5-pro';
-
 // Address Validation Helper
 async function validateAddress({ street, city, state, zip }: any) {
-  // const apiKey = await getEnv('GOOGLE_MAPS_API_KEY');
   const apiKey =
-    secret('GOOGLE_MAPS_API_KEY') || process.env.GOOGLE_MAPS_API_KEY;
+    process.env.GOOGLE_MAPS_API_KEY || (await getEnv('GOOGLE_MAPS_API_KEY'));
   if (!apiKey) {
     console.error('Missing GOOGLE_MAPS_API_KEY');
     return { success: false, formattedAddress: '' };
@@ -112,20 +74,9 @@ export async function POST(req: NextRequest) {
     );
     const body = await req.json();
     const { sessionId, message } = body;
-    // const project = await getEnv('GOOGLE_CLOUD_PROJECT');
-    let project = process.env.GOOGLE_CLOUD_PROJECT;
-    if (!project) {
-      const secretValue = secret('GOOGLE_CLOUD_PROJECT');
-      if (typeof secretValue === 'string') {
-        project = secretValue;
-      } else if (
-        secretValue &&
-        typeof secretValue === 'object' &&
-        'value' in secretValue
-      ) {
-        project = secretValue.value as string;
-      }
-    }
+    let project =
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      (await getEnv('GOOGLE_CLOUD_PROJECT'));
 
     if (!project) {
       console.error('Missing GOOGLE_CLOUD_PROJECT');
@@ -144,6 +95,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Google Cloud Setup
+    const location = 'us-central1';
+    const textModel = 'gemini-2.5-pro';
 
     const vertexAI = new VertexAI({ project, location });
     const generativeModel = vertexAI.getGenerativeModel({

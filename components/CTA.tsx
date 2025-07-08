@@ -1,6 +1,6 @@
 import PhoneNumber from './PhoneNumber';
 
-const CTA = () => {
+export const CTA = () => {
   const phoneNumber = '+1-973-384-1054';
   return (
     <section className='py-16 bg-primary text-white text-center'>

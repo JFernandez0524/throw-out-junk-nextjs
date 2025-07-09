@@ -1,61 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager';
-import { getEnv } from '@/lib/getEnv';
-import { getGenerativeModel, getSession, runGeminiChat } from '@/lib/vertexAI';
+import { getSession, runGeminiChat } from '@/lib/vertexAI';
+import { validateAddress } from '@/lib/googleMaps';
 
-// Optional: next.js runtime config (remove if not needed)
-// export const runtime = 'nodejs';
-// export const dynamic = 'force-dynamic';
-
-let cachedSecrets: Record<string, string> | null = null;
-
-// Address Validation Helper
-async function validateAddress({
-  street,
-  city,
-  state,
-  zip,
-}: {
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-}) {
-  const apiKey = await getEnv('GOOGLE_MAPS_API_KEY');
-
-  const url = `https://addressvalidation.googleapis.com/v1:validateAddress?key=${apiKey}`;
-  const addressText = `${street}, ${city}, ${state} ${zip}`;
-
-  const requestBody = {
-    address: {
-      regionCode: 'US',
-      addressLines: [addressText],
-    },
-  };
-
-  try {
-    const res = await axios.post(url, requestBody);
-    const verdict = res.data.result.verdict;
-    const formattedAddress = res.data.result.address.formattedAddress;
-    const hasValidAddress =
-      verdict.validationGranularity === 'PREMISE' &&
-      !verdict.hasUnconfirmedComponents;
-
-    return {
-      success: hasValidAddress,
-      formattedAddress: formattedAddress || addressText,
-    };
-  } catch (err) {
-    console.error('Address validation failed:', err);
-    return { success: false, formattedAddress: addressText };
-  }
-}
-
-// POST Handler
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -68,11 +14,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const project = await getEnv('GOOGLE_CLOUD_PROJECT');
-    const model = await getGenerativeModel(project);
-    const session = getSession(sessionId, model);
+    // getSession is now simple and doesn't do any heavy lifting
+    const session = getSession(sessionId);
 
-    // Address collection flow
+    // Address collection flow (this part is unchanged)
     switch (session.state) {
       case 'awaiting_street':
         session.address.street = message;
@@ -97,16 +42,11 @@ export async function POST(req: NextRequest) {
 
       case 'awaiting_zip':
         session.address.zip = message;
-        const result = await validateAddress({
-          street: session.address.street ?? '',
-          city: session.address.city ?? '',
-          state: session.address.state ?? '',
-          zip: session.address.zip ?? '',
-        });
+        const result = await validateAddress(session.address);
         if (result.success) {
           session.state = 'validated';
           return NextResponse.json({
-            response: `✅ We service this area: ${result.formattedAddress}`,
+            response: `✅ Thanks! We service this area: ${result.formattedAddress}. How can I help?`,
             sessionId,
           });
         } else {
@@ -120,7 +60,7 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // Detect intent to start address flow
+    // Intent detection (this part is unchanged)
     const lower = message.toLowerCase();
     const interestKeywords = [
       'pickup',
@@ -129,10 +69,13 @@ export async function POST(req: NextRequest) {
       'how much',
       'cost',
       'pricing',
+      'quote',
+      'book',
     ];
-    const addressIntent = interestKeywords.some((kw) => lower.includes(kw));
-
-    if (addressIntent && session.state === 'initial') {
+    if (
+      interestKeywords.some((kw) => lower.includes(kw)) &&
+      session.state === 'initial'
+    ) {
       session.state = 'awaiting_street';
       return NextResponse.json({
         response: '🏠 Great! First, what is the street address?',
@@ -141,14 +84,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Default: chat with Gemini
+    // This function now handles the complex AI initialization internally, and only when needed.
     const responseText = await runGeminiChat(session, message);
     return NextResponse.json({ response: responseText, sessionId });
   } catch (error: any) {
-    console.error('🔴 Chat route error:', error?.message || error);
-    console.error('--- CHAT API CRASHED ---');
-    console.error('ERROR:', error); // Log the full error object
-    console.error('ERROR MESSAGE:', error.message);
-    console.error('ERROR STACK:', error.stack);
+    console.error(
+      '🔴 Chat route error:',
+      error?.message || 'An unknown error occurred.'
+    );
+    console.error('ERROR STACK:', error?.stack);
     return NextResponse.json(
       { error: 'Internal Server Error', message: error?.message },
       { status: 500 }

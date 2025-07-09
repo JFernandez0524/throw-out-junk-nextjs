@@ -4,7 +4,7 @@ import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager';
-
+import { getEnv } from '@/lib/getEnv';
 import { getGenerativeModel, getSession, runGeminiChat } from '@/lib/vertexAI';
 
 // Optional: next.js runtime config (remove if not needed)
@@ -12,25 +12,6 @@ import { getGenerativeModel, getSession, runGeminiChat } from '@/lib/vertexAI';
 // export const dynamic = 'force-dynamic';
 
 let cachedSecrets: Record<string, string> | null = null;
-
-async function getEnv(key: string): Promise<string> {
-  if (process.env[key]) return process.env[key]!;
-
-  if (!cachedSecrets) {
-    const client = new SecretsManagerClient({ region: 'us-east-1' });
-    const command = new GetSecretValueCommand({
-      SecretId: 'throw-out-junk-env',
-    });
-    const response = await client.send(command);
-    cachedSecrets = JSON.parse(response.SecretString || '{}');
-  }
-
-  const value = process.env[key] ?? cachedSecrets?.[key];
-  if (!value) {
-    throw new Error(`Missing required env variable: ${key}`);
-  }
-  return value;
-}
 
 // Address Validation Helper
 async function validateAddress({
@@ -45,6 +26,7 @@ async function validateAddress({
   zip: string;
 }) {
   const apiKey = await getEnv('GOOGLE_MAPS_API_KEY');
+
   const url = `https://addressvalidation.googleapis.com/v1:validateAddress?key=${apiKey}`;
   const addressText = `${street}, ${city}, ${state} ${zip}`;
 

@@ -17,12 +17,15 @@ interface Session {
 }
 
 const chatSessions: Record<string, Session> = {};
+let vertexAI: VertexAI | null = null;
 
 const location = 'us-central1';
 const textModel = 'gemini-2.5-pro';
 
 export async function getGenerativeModel(project: string) {
-  const vertexAI = new VertexAI({ project, location });
+  if (!vertexAI) {
+    vertexAI = new VertexAI({ project, location });
+  }
   return vertexAI.getGenerativeModel({
     model: textModel,
     safetySettings: [

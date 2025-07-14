@@ -1,101 +1,65 @@
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from '@aws-sdk/client-bedrock-runtime';
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, runGeminiChat } from '@/lib/vertexAI';
-import { validateAddress } from '@/lib/googleMaps';
+
+// Initialize the Bedrock client. It will automatically use the IAM role
+// from the Amplify Hosting environment.
+const client = new BedrockRuntimeClient({ region: 'us-east-1' });
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { sessionId, message } = body;
+    // We expect the full prompt (including history) from the client.
+    const { prompt } = await req.json();
 
-    if (!sessionId || !message) {
+    if (!prompt) {
       return NextResponse.json(
-        { error: 'sessionId and message are required' },
+        { error: 'Prompt is required' },
         { status: 400 }
       );
     }
 
-    // getSession is now simple and doesn't do any heavy lifting
-    const session = getSession(sessionId);
+    // Construct the specific payload for the Anthropic Claude model.
+    const payload = {
+      anthropic_version: 'bedrock-2023-05-31',
+      max_tokens: 1024,
+      messages: [{ role: 'user' as const, content: prompt }],
+    };
 
-    // Address collection flow (this part is unchanged)
-    switch (session.state) {
-      case 'awaiting_street':
-        session.address.street = message;
-        session.state = 'awaiting_city';
-        return NextResponse.json({
-          response: '📍 What city is this in?',
-          sessionId,
-        });
+    const command = new InvokeModelCommand({
+      modelId: 'anthropic.claude-3-haiku-20240307-v1:0', // Using the fast Haiku model
+      contentType: 'application/json',
+      accept: 'application/json',
+      body: JSON.stringify(payload),
+    });
 
-      case 'awaiting_city':
-        session.address.city = message;
-        session.state = 'awaiting_state';
-        return NextResponse.json({ response: '🗺️ What state?', sessionId });
+    const apiResponse = await client.send(command);
+    const decodedResponseBody = new TextDecoder().decode(apiResponse.body);
+    const responseBody = JSON.parse(decodedResponseBody);
 
-      case 'awaiting_state':
-        session.address.state = message;
-        session.state = 'awaiting_zip';
-        return NextResponse.json({
-          response: '🔢 What is the ZIP code?',
-          sessionId,
-        });
+    // Extract the text response from the model's specific output structure.
+    const responseText = responseBody.content[0].text;
 
-      case 'awaiting_zip':
-        session.address.zip = message;
-        const result = await validateAddress(session.address);
-        if (result.success) {
-          session.state = 'validated';
-          return NextResponse.json({
-            response: `✅ Thanks! We service this area: ${result.formattedAddress}. How can I help?`,
-            sessionId,
-          });
-        } else {
-          session.state = 'awaiting_street';
-          session.address = {};
-          return NextResponse.json({
-            response:
-              "⚠️ That address couldn't be verified. Let's try again. What's the street address?",
-            sessionId,
-          });
-        }
-    }
-
-    // Intent detection (this part is unchanged)
-    const lower = message.toLowerCase();
-    const interestKeywords = [
-      'pickup',
-      'remove',
-      'junk',
-      'how much',
-      'cost',
-      'pricing',
-      'quote',
-      'book',
-    ];
-    if (
-      interestKeywords.some((kw) => lower.includes(kw)) &&
-      session.state === 'initial'
-    ) {
-      session.state = 'awaiting_street';
-      return NextResponse.json({
-        response: '🏠 Great! First, what is the street address?',
-        sessionId,
-      });
-    }
-
-    // Default: chat with Gemini
-    // This function now handles the complex AI initialization internally, and only when needed.
-    const responseText = await runGeminiChat(session, message);
-    return NextResponse.json({ response: responseText, sessionId });
+    return NextResponse.json({ response: responseText });
   } catch (error: any) {
-    console.error(
-      '🔴 Chat route error:',
-      error?.message || 'An unknown error occurred.'
-    );
-    console.error('ERROR STACK:', error?.stack);
+    console.error('[BEDROCK_API_ERROR]', error);
+    // Check for throttling specifically
+    if (error.name === 'ThrottlingException') {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again in a moment.' },
+        { status: 429 } // 429 Too Many Requests
+      );
+    }
     return NextResponse.json(
-      { error: 'Internal Server Error', message: error?.message },
+      { error: 'An error occurred while communicating with the AI.' },
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    message: 'This is a custom API route for AI chat.',
+  });
 }

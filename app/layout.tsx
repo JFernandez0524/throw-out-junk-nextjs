@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { DarkMode } from '../components/darkMode';
 import { ClientProvider } from '../components/ClientProvider'; // ✅ NEW
-import ChatBox from '../components/ChatBox';
+import { ChatBox } from '../components/ChatBox';
 import { ChatProvider } from '@/context/ChatContext';
 
 const inter = Inter({ subsets: ['latin'] });

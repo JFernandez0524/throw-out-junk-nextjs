@@ -1,148 +1,165 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useChatContext } from '@/context/ChatContext';
+import { useState, useRef, useEffect } from 'react';
+import {
+  Button,
+  TextField,
+  Flex,
+  Text,
+  Card,
+  Loader,
+  ScrollView,
+} from '@aws-amplify/ui-react';
+import '@aws-amplify/ui-react/styles.css';
 
-export default function ChatBox() {
-  const [messages, setMessages] = useState<
-    { role: 'user' | 'ai'; text: string }[]
-  >([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+type Message = {
+  sender: 'user' | 'ai';
+  text: string;
+};
 
-  const [sessionId, setSessionId] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+// Helper function for the retry delay
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Access chat context to control visibility
-
-  const { showChat, setShowChat } = useChatContext();
-
-  useEffect(() => {
-    const id = localStorage.getItem('chat_session_id') || crypto.randomUUID();
-    localStorage.setItem('chat_session_id', id);
-    setSessionId(id);
-  }, []);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+export function ChatBox() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [prompt, setPrompt] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = async () => {
-    if (!input.trim() || !sessionId) return;
+    if (!prompt || isLoading) return;
 
-    const userMessage = { role: 'user' as const, text: input };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
+    const currentPrompt = prompt;
+    const newMessages: Message[] = [
+      ...messages,
+      { sender: 'user', text: currentPrompt },
+    ];
 
-    try {
-      const res = await fetch('/api/v1/chat/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage.text, sessionId }),
-      });
+    setMessages(newMessages);
+    setPrompt('');
+    setIsLoading(true);
 
-      const data = await res.json();
-      const botMessage = { role: 'ai' as const, text: data.response };
-      setMessages((prev) => [...prev, botMessage]);
-    } catch (err) {
-      console.error('Chat error:', err);
+    // Build the conversation context
+    const systemPrompt =
+      "You are a friendly, expert junk removal assistant for a company called 'Throw Out My Junk'. You are conversational and not overly verbose. When a user asks about pricing or services, always mention you need their address first to give an accurate quote.\n\n";
+    const historyString = newMessages
+      .slice(-4)
+      .map(
+        (msg) => `${msg.sender === 'user' ? 'User' : 'Assistant'}: ${msg.text}`
+      )
+      .join('\n');
+    const fullPrompt = systemPrompt + historyString;
+
+    // Implement retry logic for throttling
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      try {
+        const response = await fetch('/api/v1/chat/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: fullPrompt }),
+        });
+
+        if (response.status === 429) {
+          throw new Error('ThrottlingException');
+        }
+
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setMessages((prev) => [...prev, { sender: 'ai', text: data.response }]);
+        break; // Exit the loop if successful
+      } catch (e: any) {
+        attempts++;
+        if (e.message === 'ThrottlingException' && attempts < maxAttempts) {
+          const delay = Math.pow(2, attempts) * 200; // e.g., 200ms, 400ms, 800ms
+          console.log(`Throttled. Retrying in ${delay}ms...`);
+          await sleep(delay);
+        } else {
+          console.error('Failed to send message after multiple retries:', e);
+          setMessages((prev) => [
+            ...prev,
+            {
+              sender: 'ai',
+              text: 'Sorry, a network error occurred. Please try again.',
+            },
+          ]);
+          break; // Exit loop after final failure
+        }
+      }
     }
 
-    setLoading(false);
+    setIsLoading(false);
   };
 
+  if (!isOpen) {
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className='fixed bottom-4 right-4 bg-green-600 text-white p-4 rounded-full shadow-lg hover:bg-green-700 z-50'
+      >
+        Chat with us
+      </button>
+    );
+  }
+
   return (
-    <>
-      {/* Inline prompt - place this below your hero/header */}
-      {!showChat && (
-        <div className='flex justify-center mt-6'>
-          <input
-            type='text'
-            placeholder='How can we help you?'
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                setInput(e.currentTarget.value);
-                setShowChat(true);
-                e.currentTarget.value = '';
-              }
-            }}
-            className='border p-2 rounded shadow-md w-full max-w-md text-sm'
-          />
-        </div>
-      )}
-
-      {!showChat && (
-        <div className='fixed bottom-6 right-6 flex flex-col items-center space-y-1 z-50'>
-          <span className='text-sm text-gray-700 bg-white px-2 py-1 rounded shadow'>
-            Chat with us
-          </span>
-          <button
-            onClick={() => setShowChat(true)}
-            className='w-14 h-14 rounded-full bg-green-600 text-white shadow-lg hover:bg-green-700 flex items-center justify-center text-xl'
+    <div className='fixed bottom-4 right-4 w-96 h-[600px] bg-white border border-gray-300 rounded-lg shadow-xl flex flex-col z-50'>
+      <ScrollView height='100%' width='100%'>
+        <Flex direction='column' className='h-full'>
+          <Text className='p-4 font-bold border-b flex-shrink-0'>
+            Chat with JunkBot
+          </Text>
+          <Flex
+            direction='column'
+            gap='small'
+            className='p-4 flex-grow overflow-y-auto min-h-0'
           >
-            💬
-          </button>
-        </div>
-      )}
-
-      {/* Chat Dialog */}
-      {showChat && (
-        <div className='fixed bottom-20 right-6 w-80 max-h-[70vh] bg-white border border-gray-300 rounded-lg shadow-2xl flex flex-col z-50'>
-          {/* Header */}
-          <div className='bg-green-600 text-white p-3 rounded-t-lg flex justify-between items-center'>
-            <span className='font-semibold'>Chat with us</span>
-            <button
-              onClick={() => setShowChat(false)}
-              className='text-white hover:text-gray-200 text-sm'
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Messages */}
-          <div className='flex-1 p-3 overflow-y-auto text-sm space-y-2'>
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            {messages.map((msg, index) => (
+              <Card
+                key={index}
+                variation={msg.sender === 'ai' ? 'elevated' : 'outlined'}
               >
-                <div
-                  className={`rounded px-3 py-2 max-w-[75%] ${
-                    msg.role === 'user'
-                      ? 'bg-blue-100 text-right'
-                      : 'bg-gray-100 text-left'
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
+                <Text>{msg.text}</Text>
+              </Card>
             ))}
-            {loading && (
-              <p className='text-gray-400 italic text-xs'>Typing...</p>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          <div className='p-2 border-t flex gap-2'>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder='Type your message...'
-              className='flex-1 border border-gray-300 rounded p-2 text-sm'
+            {isLoading && <Loader />}
+          </Flex>
+          <Flex
+            as='form'
+            direction='row'
+            gap='small'
+            className='p-4 border-t flex-shrink-0'
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+          >
+            <TextField
+              label='Chat message'
+              labelHidden={true}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder='Ask a question...'
+              className='flex-grow'
+              isDisabled={isLoading}
             />
-            <button
-              onClick={handleSend}
-              disabled={loading}
-              className='bg-green-600 text-white px-4 rounded hover:bg-green-700 text-sm'
-            >
+            <Button type='submit' variation='primary' isLoading={isLoading}>
               Send
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+            </Button>
+          </Flex>
+        </Flex>
+      </ScrollView>
+      <button
+        onClick={() => setIsOpen(false)}
+        className='w-full bg-gray-200 text-black p-2 rounded-b-lg hover:bg-gray-300 absolute bottom-0'
+      >
+        Close
+      </button>
+    </div>
   );
 }

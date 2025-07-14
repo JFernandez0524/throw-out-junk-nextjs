@@ -18,7 +18,7 @@ interface ValidationResult {
 export async function validateAddress(
   address: Address
 ): Promise<ValidationResult> {
-  const apiKey = await getEnv('Maps_API_KEY');
+  const apiKey = await getEnv('GOOGLE_MAPS_API_KEY');
   if (!apiKey) {
     throw new Error('Google Maps API key is not configured.');
   }

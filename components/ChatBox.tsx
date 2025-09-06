@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Button,
   TextField,
@@ -26,17 +26,38 @@ export function ChatBox() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = async () => {
-    if (!prompt || isLoading) return;
+  // Ref to the end of messages for auto-scrolling
+  const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
+  // Function to scroll to the bottom of the chat
+  const scrollToBottom = () => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-    const currentPrompt = prompt;
+  // Function to handle quick action buttons
+  const sendOption = (text: string) => {
+    setMessages([...messages, { sender: 'user', text }]);
+    setPrompt('');
+    handleSend(text);
+  };
+
+  // Main function to send the prompt to the backend
+  const handleSend = async (inputText?: string) => {
+    if (inputText) console.log('Sending message:', inputText);
+
+    const currentPrompt = (inputText ?? prompt).trim();
+    if (!currentPrompt || isLoading) return;
+
     const newMessages: Message[] = [
       ...messages,
       { sender: 'user', text: currentPrompt },
     ];
 
     setMessages(newMessages);
-    setPrompt('');
+    if (!inputText) setPrompt('');
     setIsLoading(true);
 
     // Build the conversation context
@@ -119,6 +140,20 @@ export function ChatBox() {
             gap='small'
             className='p-4 flex-grow overflow-y-auto min-h-0'
           >
+            {/* Show quick action buttons when there are no messages */}
+            {messages.length === 0 && !isLoading && (
+              <Flex direction='row' gap='small' wrap='wrap' className='p-4'>
+                <Button onClick={() => sendOption('Get a quote')}>
+                  📦 Get a quote
+                </Button>
+                <Button onClick={() => sendOption('How does it work?')}>
+                  ❓ Learn more
+                </Button>
+                <Button onClick={() => sendOption('Schedule pickup')}>
+                  📅 Schedule pickup
+                </Button>
+              </Flex>
+            )}
             {messages.map((msg, index) => (
               <Card
                 key={index}
@@ -128,6 +163,7 @@ export function ChatBox() {
               </Card>
             ))}
             {isLoading && <Loader />}
+            <div ref={endOfMessagesRef} />
           </Flex>
           <Flex
             as='form'
